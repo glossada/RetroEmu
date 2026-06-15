@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tema base fullscreen para app Compose en TV; sin título ni barra de acción -->
+    <style name="Theme.RetroTV" parent="android:Theme.Black.NoTitleBar.Fullscreen" />
+</resources>

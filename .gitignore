@@ -1,0 +1,31 @@
+# Build outputs
+build/
+app/build/
+
+# Gradle cache (no el wrapper en sí)
+.gradle/
+
+# Android local config (contiene rutas locales del SDK)
+local.properties
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Keystore files (no commitear claves reales)
+*.jks
+*.keystore
+
+# OS
+.DS_Store
+Thumbs.db
+
+# APKs y bundles generados
+*.apk
+*.aab
+*.ap_
+
+# Logs
+*.log

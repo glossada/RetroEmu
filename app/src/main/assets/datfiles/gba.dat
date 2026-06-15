@@ -1,0 +1,6 @@
+clrmamepro (
+	name "Nintendo - Game Boy Advance"
+	description "Nintendo - Game Boy Advance"
+	version "2026.06.14"
+	homepage "http://github.com/robloach/libretro-dats"
+)
