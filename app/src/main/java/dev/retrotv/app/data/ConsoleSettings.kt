@@ -25,25 +25,29 @@ object ConsoleSettings {
     // ── Button mapping ────────────────────────────────────────────────────────
 
     val ALL_ACTIONS = listOf(
-        "a", "b", "x", "y", "l", "r",
+        "a", "b", "x", "y", "l", "r", "l2", "r2",
         "start", "select",
         "up", "down", "left", "right",
     )
 
     fun actionsForSystem(system: String): List<String> = when (system) {
-        "nes" -> listOf("a", "b", "select", "start", "up", "down", "left", "right")
-        "gba" -> listOf("a", "b", "l", "r", "select", "start", "up", "down", "left", "right")
-        "nds" -> listOf("a", "b", "x", "y", "l", "r", "select", "start", "up", "down", "left", "right")
-        else  -> ALL_ACTIONS
+        "nes"  -> listOf("a", "b", "select", "start", "up", "down", "left", "right")
+        "gba"  -> listOf("a", "b", "l", "r", "select", "start", "up", "down", "left", "right")
+        "nds"  -> listOf("a", "b", "x", "y", "l", "r", "select", "start", "up", "down", "left", "right")
+        "snes" -> listOf("a", "b", "x", "y", "l", "r", "select", "start", "up", "down", "left", "right")
+        "ps1"  -> listOf("a", "b", "x", "y", "l", "r", "l2", "r2", "select", "start", "up", "down", "left", "right")
+        else   -> ALL_ACTIONS
     }
 
     fun actionLabel(action: String, system: String): String = when (action) {
-        "a"      -> if (system == "megadrive") "C" else "A"
-        "b"      -> "B"
-        "x"      -> if (system == "megadrive") "X" else "L"
-        "y"      -> if (system == "megadrive") "A" else "R"
-        "l"      -> if (system == "megadrive") "Y" else "L"
-        "r"      -> if (system == "megadrive") "Z" else "R"
+        "a"      -> if (system == "megadrive") "C" else if (system == "ps1") "○" else "A"
+        "b"      -> if (system == "ps1") "✕" else "B"
+        "x"      -> if (system == "megadrive") "X" else if (system == "ps1") "△" else "X"
+        "y"      -> if (system == "megadrive") "A" else if (system == "ps1") "□" else "Y"
+        "l"      -> if (system == "megadrive") "Y" else "L1"
+        "r"      -> if (system == "megadrive") "Z" else "R1"
+        "l2"     -> "L2"
+        "r2"     -> "R2"
         "start"  -> "Start"
         "select" -> if (system == "megadrive") "Mode" else "Select"
         "up"     -> "D-Pad ↑"
@@ -62,6 +66,8 @@ object ConsoleSettings {
         "y"      to KeyEvent.KEYCODE_BUTTON_X,
         "l"      to KeyEvent.KEYCODE_BUTTON_L1,
         "r"      to KeyEvent.KEYCODE_BUTTON_R1,
+        "l2"     to KeyEvent.KEYCODE_BUTTON_L2,
+        "r2"     to KeyEvent.KEYCODE_BUTTON_R2,
         "start"  to KeyEvent.KEYCODE_BUTTON_START,
         "select" to KeyEvent.KEYCODE_BUTTON_SELECT,
         "up"     to KeyEvent.KEYCODE_DPAD_UP,
@@ -78,6 +84,8 @@ object ConsoleSettings {
         "y"      to KeyEvent.KEYCODE_BUTTON_Y,
         "l"      to KeyEvent.KEYCODE_BUTTON_L1,
         "r"      to KeyEvent.KEYCODE_BUTTON_R1,
+        "l2"     to KeyEvent.KEYCODE_BUTTON_L2,
+        "r2"     to KeyEvent.KEYCODE_BUTTON_R2,
         "start"  to KeyEvent.KEYCODE_BUTTON_START,
         "select" to KeyEvent.KEYCODE_BUTTON_SELECT,
         "up"     to KeyEvent.KEYCODE_DPAD_UP,

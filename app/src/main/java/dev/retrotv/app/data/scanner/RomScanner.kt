@@ -15,6 +15,8 @@ class RomScanner {
             "megadrive" to setOf("md", "gen", "bin", "smd"),
             "gba"       to setOf("gba"),
             "nds"       to setOf("nds", "dsi"),
+            "snes"      to setOf("sfc", "smc", "fig", "bs"),
+            "ps1"       to setOf("chd", "cue", "pbp", "iso"),
         )
     }
 

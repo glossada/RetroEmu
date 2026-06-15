@@ -24,6 +24,8 @@ object CoreExtractor {
         "megadrive" -> "genesis_plus_gx_libretro_android.so"
         "gba"       -> "mgba_libretro_android.so"
         "nds"       -> "melonds_libretro_android.so"
+        "snes"      -> "snes9x_libretro_android.so"
+        "ps1"       -> "pcsx_rearmed_libretro_android.so"
         else        -> "nestopia_libretro_android.so"
     }
 

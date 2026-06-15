@@ -82,7 +82,7 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.width(40.dp))
 
-            // Grilla 2×2 de consolas
+            // Grilla 3×2 de consolas
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -96,6 +96,13 @@ fun HomeScreen(
                         iconRes = R.drawable.ic_nes,
                         cardColor = Color(0xFF9B1A1A),
                         onClick = { onConsoleSelected("nes") },
+                        modifier = Modifier.weight(1f),
+                    )
+                    ConsoleCard(
+                        name = "Super Nintendo",
+                        iconRes = R.drawable.ic_snes,
+                        cardColor = Color(0xFF5B3A8B),
+                        onClick = { onConsoleSelected("snes") },
                         modifier = Modifier.weight(1f),
                     )
                     ConsoleCard(
@@ -122,6 +129,13 @@ fun HomeScreen(
                         iconRes = R.drawable.ic_nds,
                         cardColor = Color(0xFF1A7A3A),
                         onClick = { onConsoleSelected("nds") },
+                        modifier = Modifier.weight(1f),
+                    )
+                    ConsoleCard(
+                        name = "PlayStation",
+                        iconRes = R.drawable.ic_ps1,
+                        cardColor = Color(0xFF1A3A5C),
+                        onClick = { onConsoleSelected("ps1") },
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -176,7 +190,7 @@ private fun ScanOverlay(
                     }
                     is ScanViewModel.ScanState.Scanning -> {
                         val systemLabel = when (state.system) {
-                            "nes" -> "NES"; "megadrive" -> "Mega Drive"; "gba" -> "Game Boy Advance"; "nds" -> "Nintendo DS"; else -> state.system
+                            "nes" -> "NES"; "snes" -> "Super Nintendo"; "megadrive" -> "Mega Drive"; "gba" -> "Game Boy Advance"; "nds" -> "Nintendo DS"; "ps1" -> "PlayStation"; else -> state.system
                         }
                         val source = if (state.isExternal) " (USB)" else ""
                         Text(
@@ -233,7 +247,7 @@ private fun ScanOverlay(
                             onClick = onDismiss,
                             modifier = Modifier.focusRequester(focusRequester),
                         ) { Text("Cerrar") }
-                        LaunchedEffect(Unit) { runCatching { focusRequester.requestFocus() } }
+                        LaunchedEffect(state) { runCatching { focusRequester.requestFocus() } }
                     }
                     is ScanViewModel.ScanState.Error -> {
                         Text(
@@ -249,7 +263,7 @@ private fun ScanOverlay(
                             onClick = onDismiss,
                             modifier = Modifier.focusRequester(focusRequester),
                         ) { Text("Cerrar") }
-                        LaunchedEffect(Unit) { runCatching { focusRequester.requestFocus() } }
+                        LaunchedEffect(state) { runCatching { focusRequester.requestFocus() } }
                     }
                     ScanViewModel.ScanState.Idle -> {}
                 }
@@ -351,7 +365,7 @@ private fun ImportOverlay(
 
                     is ImportViewModel.ImportState.Copying -> {
                         val systemLabel = when (state.system) {
-                            "nes" -> "NES"; "megadrive" -> "Mega Drive"; "gba" -> "Game Boy Advance"; "nds" -> "Nintendo DS"; else -> state.system
+                            "nes" -> "NES"; "snes" -> "Super Nintendo"; "megadrive" -> "Mega Drive"; "gba" -> "Game Boy Advance"; "nds" -> "Nintendo DS"; "ps1" -> "PlayStation"; else -> state.system
                         }
                         Text("Copiando $systemLabel…", style = MaterialTheme.typography.titleMedium)
                         if (state.total > 0) {
@@ -366,7 +380,7 @@ private fun ImportOverlay(
                         Text("Importación completada", style = MaterialTheme.typography.titleMedium)
                         state.results.forEach { (system, count) ->
                             val label = when (system) {
-                                "nes" -> "NES"; "megadrive" -> "Mega Drive"; "gba" -> "Game Boy Advance"; "nds" -> "Nintendo DS"; else -> system
+                                "nes" -> "NES"; "snes" -> "Super Nintendo"; "megadrive" -> "Mega Drive"; "gba" -> "Game Boy Advance"; "nds" -> "Nintendo DS"; "ps1" -> "PlayStation"; else -> system
                             }
                             Text("$label: $count archivos copiados", style = MaterialTheme.typography.bodyLarge)
                         }
@@ -380,7 +394,7 @@ private fun ImportOverlay(
                             onClick = onDismiss,
                             modifier = Modifier.focusRequester(focusRequester),
                         ) { Text("Cerrar") }
-                        LaunchedEffect(Unit) { runCatching { focusRequester.requestFocus() } }
+                        LaunchedEffect(state) { runCatching { focusRequester.requestFocus() } }
                     }
 
                     is ImportViewModel.ImportState.Error -> {
@@ -395,7 +409,7 @@ private fun ImportOverlay(
                             onClick = onDismiss,
                             modifier = Modifier.focusRequester(focusRequester),
                         ) { Text("Cerrar") }
-                        LaunchedEffect(Unit) { runCatching { focusRequester.requestFocus() } }
+                        LaunchedEffect(state) { runCatching { focusRequester.requestFocus() } }
                     }
 
                     else -> {}

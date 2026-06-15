@@ -9,6 +9,8 @@ object ThumbnailUrlBuilder {
         "megadrive" to "Sega - Mega Drive - Genesis",
         "gba"       to "Nintendo - Game Boy Advance",
         "nds"       to "Nintendo - Nintendo DS",
+        "snes"      to "Nintendo - Super Nintendo Entertainment System",
+        "ps1"       to "Sony - PlayStation",
     )
 
     // Characters that libretro-thumbnails replaces with underscore in filenames

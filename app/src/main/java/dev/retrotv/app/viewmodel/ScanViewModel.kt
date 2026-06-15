@@ -32,20 +32,32 @@ class ScanViewModel(application: Application) : AndroidViewModel(application) {
     private val scanner = RomScanner()
 
     private val folderAliases = mapOf(
-        "nes"              to "nes",
-        "famicom"          to "nes",
-        "megadrive"        to "megadrive",
-        "mega drive"       to "megadrive",
-        "genesis"          to "megadrive",
-        "sega"             to "megadrive",
-        "md"               to "megadrive",
-        "gba"              to "gba",
-        "game boy advance" to "gba",
-        "gameboy advance"  to "gba",
-        "nds"              to "nds",
-        "ds"               to "nds",
-        "nintendo ds"      to "nds",
-        "nintendo_ds"      to "nds",
+        "nes"                     to "nes",
+        "famicom"                 to "nes",
+        "megadrive"               to "megadrive",
+        "mega drive"              to "megadrive",
+        "genesis"                 to "megadrive",
+        "sega"                    to "megadrive",
+        "md"                      to "megadrive",
+        "gba"                     to "gba",
+        "game boy advance"        to "gba",
+        "gameboy advance"         to "gba",
+        "nds"                     to "nds",
+        "ds"                      to "nds",
+        "nintendo ds"             to "nds",
+        "nintendo_ds"             to "nds",
+        "snes"                    to "snes",
+        "super nintendo"          to "snes",
+        "super nes"               to "snes",
+        "snes9x"                  to "snes",
+        "super famicom"           to "snes",
+        "super_nintendo"          to "snes",
+        "ps1"                     to "ps1",
+        "psx"                     to "ps1",
+        "playstation"             to "ps1",
+        "playstation 1"           to "ps1",
+        "sony playstation"        to "ps1",
+        "sony - playstation"      to "ps1",
     )
 
     fun startScan() {
@@ -56,7 +68,7 @@ class ScanViewModel(application: Application) : AndroidViewModel(application) {
                 val allSkipped = mutableListOf<String>()
                 val app = getApplication<Application>()
 
-                for (system in listOf("nes", "megadrive", "gba", "nds")) {
+                for (system in listOf("nes", "snes", "megadrive", "gba", "nds", "ps1")) {
                     _state.value = ScanState.Scanning(0, 0, system)
 
                     val datResult = withContext(Dispatchers.IO) {

@@ -98,7 +98,7 @@ class EmulatorActivity : ComponentActivity() {
         val data = GLRetroViewData(this).apply {
             coreFilePath    = corePath
             gameFilePath    = romPath
-            systemDirectory = filesDir.absolutePath
+            systemDirectory = if (system == "ps1") dev.retrotv.app.data.BiosImporter.SYSTEM_DIR.absolutePath else filesDir.absolutePath
             savesDirectory  = saveDir.absolutePath
             saveRAMState    = if (srmFile.exists()) srmFile.readBytes() else null
             if (system == "nds") {
@@ -248,7 +248,8 @@ class EmulatorActivity : ComponentActivity() {
             return true
         }
 
-        val nativeCode = keyMap[event.keyCode]
+        val effectiveKeyCode = translateKeyboardKey(event.keyCode)
+        val nativeCode = keyMap[effectiveKeyCode]
         if (nativeCode != null && ::retroView.isInitialized) {
             retroView.sendKeyEvent(action, nativeCode)
             return true
@@ -369,8 +370,10 @@ class EmulatorActivity : ComponentActivity() {
             AspectRatio.INTEGER_SCALE -> {
                 val (nativeW, nativeH) = when (system) {
                     "megadrive" -> 320 to 224
+                    "snes"      -> 256 to 224
                     "gba"       -> 240 to 160
                     "nds"       -> 512 to 192   // Left/Right layout: two 256×192 screens side by side
+                    "ps1"       -> 320 to 240
                     else        -> 256 to 240
                 }
                 val scale = minOf(screenW / nativeW, screenH / nativeH).coerceAtLeast(1)
@@ -409,14 +412,28 @@ class EmulatorActivity : ComponentActivity() {
         }
     }
 
+    // Maps PC keyboard keys to gamepad physical keycodes for emulator testing (debug only).
+    // Layout: arrows=D-pad  Z=A  X=B  A=X  S=Y  Q=L1  W=R1  E=L2  R=R2  Enter=Start  Tab=Select
+    private fun translateKeyboardKey(keyCode: Int): Int = when (keyCode) {
+        KeyEvent.KEYCODE_Z          -> KeyEvent.KEYCODE_BUTTON_B   // → "a" action (A/Cross/○)
+        KeyEvent.KEYCODE_X          -> KeyEvent.KEYCODE_BUTTON_A   // → "b" action (B/✕)
+        KeyEvent.KEYCODE_A          -> KeyEvent.KEYCODE_BUTTON_Y   // → "x" action (X/□/△)
+        KeyEvent.KEYCODE_S          -> KeyEvent.KEYCODE_BUTTON_X   // → "y" action (Y/△/□)
+        KeyEvent.KEYCODE_Q          -> KeyEvent.KEYCODE_BUTTON_L1
+        KeyEvent.KEYCODE_W          -> KeyEvent.KEYCODE_BUTTON_R1
+        KeyEvent.KEYCODE_E          -> KeyEvent.KEYCODE_BUTTON_L2
+        KeyEvent.KEYCODE_R          -> KeyEvent.KEYCODE_BUTTON_R2
+        KeyEvent.KEYCODE_ENTER      -> KeyEvent.KEYCODE_BUTTON_START
+        KeyEvent.KEYCODE_TAB        -> KeyEvent.KEYCODE_BUTTON_SELECT
+        else                        -> keyCode
+    }
+
     companion object {
         const val EXTRA_CORE_PATH = "extra_core_path"
         const val EXTRA_ROM_PATH  = "extra_rom_path"
         const val EXTRA_SYSTEM    = "extra_system"
 
         private const val MENU_SIZE = 4
-
-
     }
 }
 
