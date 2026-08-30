@@ -32,6 +32,9 @@ interface GameDao {
     @Query("DELETE FROM games WHERE system = :system AND isExternal = 1")
     suspend fun deleteExternalGamesBySystem(system: String)
 
+    @Query("DELETE FROM games WHERE id IN (:ids)")
+    suspend fun deleteGamesByIds(ids: List<String>)
+
     @Query("UPDATE games SET lastPlayedAt = :ts WHERE filePath = :path")
     suspend fun updateLastPlayedByPath(path: String, ts: Long)
 }

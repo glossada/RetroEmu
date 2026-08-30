@@ -99,7 +99,7 @@ class ScanViewModel(application: Application) : AndroidViewModel(application) {
     fun startExternalScan() {
         if (_state.value is ScanState.Scanning) return
         viewModelScope.launch {
-            val volumes = withContext(Dispatchers.IO) { RomImporter.findRemovableVolumes() }
+            val volumes = withContext(Dispatchers.IO) { RomImporter.findRemovableVolumes(getApplication()) }
             when {
                 volumes.isEmpty() -> _state.value = ScanState.Error("No se encontró ningún dispositivo USB conectado.")
                 volumes.size == 1 -> scanVolume(volumes.first())

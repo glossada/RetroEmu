@@ -26,7 +26,7 @@ class ImportViewModel(application: Application) : AndroidViewModel(application) 
     /** Detects USB volumes and either auto-starts or asks the user to choose. */
     fun startImport() {
         if (_state.value !is ImportState.Idle) return
-        val volumes = RomImporter.findRemovableVolumes()
+        val volumes = RomImporter.findRemovableVolumes(getApplication())
         when {
             volumes.isEmpty() -> _state.value = ImportState.Error(
                 "No se encontró ningún USB ni tarjeta SD conectada.\n" +

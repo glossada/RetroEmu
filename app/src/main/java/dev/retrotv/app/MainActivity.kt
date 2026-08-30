@@ -25,6 +25,7 @@ import dev.retrotv.app.ui.screens.GameListScreen
 import dev.retrotv.app.ui.screens.HomeScreen
 import dev.retrotv.app.ui.screens.OnboardingScreen
 import dev.retrotv.app.ui.theme.RetroGameTVTheme
+import dev.retrotv.app.viewmodel.ExportViewModel
 import dev.retrotv.app.viewmodel.PermissionState
 import dev.retrotv.app.viewmodel.PermissionViewModel
 import dev.retrotv.app.viewmodel.ImportViewModel
@@ -35,6 +36,7 @@ class MainActivity : ComponentActivity() {
     private val permissionViewModel: PermissionViewModel by viewModels()
     private val scanViewModel: ScanViewModel by viewModels()
     private val importViewModel: ImportViewModel by viewModels()
+    private val exportViewModel: ExportViewModel by viewModels()
 
     // Set by ConsoleSettingsScreen when the user is remapping a button.
     // Intercepted here because Compose onKeyEvent doesn't reliably receive gamepad events on TV.
@@ -63,8 +65,9 @@ class MainActivity : ComponentActivity() {
             RetroGameTVTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val permState by permissionViewModel.state.collectAsState()
-                    val scanState  by scanViewModel.state.collectAsState()
+                    val scanState   by scanViewModel.state.collectAsState()
                     val importState by importViewModel.state.collectAsState()
+                    val exportState by exportViewModel.state.collectAsState()
                     when (permState) {
                         PermissionState.NotGranted -> OnboardingScreen(
                             onRequestPermission = ::openStorageSettings
@@ -86,10 +89,14 @@ class MainActivity : ComponentActivity() {
                                     onSelectScanVolume = { vol -> scanViewModel.scanVolume(vol) },
                                     scanState          = scanState,
                                     onDismissScan      = { scanViewModel.dismissResult() },
-                                    onImportClick      = { importViewModel.startImport() },
-                                    onSelectVolume     = { vol -> importViewModel.selectVolume(vol) },
-                                    importState        = importState,
-                                    onDismissImport    = { importViewModel.dismiss() },
+                                    onImportClick        = { importViewModel.startImport() },
+                                    onSelectVolume       = { vol -> importViewModel.selectVolume(vol) },
+                                    importState          = importState,
+                                    onDismissImport      = { importViewModel.dismiss() },
+                                    onExportClick        = { exportViewModel.startExport() },
+                                    onSelectExportVolume = { vol -> exportViewModel.selectVolume(vol) },
+                                    exportState          = exportState,
+                                    onDismissExport      = { exportViewModel.dismiss() },
                                 )
                                 is AppScreen.GameList -> GameListScreen(
                                     system = s.system,

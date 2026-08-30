@@ -1,5 +1,9 @@
 package dev.retrotv.app.data
 
+import android.content.Context
+import android.os.Build
+import android.os.Environment
+import android.os.storage.StorageManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -38,11 +42,19 @@ object RomImporter {
         "sony - playstation"      to "ps1",
     )
 
-    /** Returns removable volumes found under /storage/ (USB drives, SD cards). */
-    fun findRemovableVolumes(): List<File> =
-        File("/storage").listFiles()
-            ?.filter { it.isDirectory && it.name != "emulated" && it.canRead() }
-            ?: emptyList()
+    /** Returns removable volumes (USB drives, SD cards) currently mounted. */
+    fun findRemovableVolumes(context: Context): List<File> {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val sm = context.getSystemService(StorageManager::class.java)
+            sm.storageVolumes
+                .filter { it.isRemovable && it.state == Environment.MEDIA_MOUNTED }
+                .mapNotNull { it.directory }
+        } else {
+            File("/storage").listFiles()
+                ?.filter { it.isDirectory && it.name != "emulated" }
+                ?: emptyList()
+        }
+    }
 
     /**
      * Copies ROM files from [volume] subfolders into the app's ROM directories.

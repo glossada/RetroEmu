@@ -43,6 +43,7 @@ import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
+import dev.retrotv.app.ui.CrtOverlay
 import dev.retrotv.app.data.ConsoleSettings
 import dev.retrotv.app.data.dataStore
 import kotlinx.coroutines.flow.map
@@ -87,7 +88,7 @@ fun ConsoleSettingsScreen(
     // Capture mode: which action is waiting for a key press
     var capturingAction by remember { mutableStateOf<String?>(null) }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF080A0D))) {
 
         Column(
             modifier = Modifier
@@ -159,6 +160,8 @@ fun ConsoleSettingsScreen(
 
             Spacer(Modifier.height(16.dp))
         }
+
+        CrtOverlay()
 
         // ── Capture overlay ──────────────────────────────────────────────────
         capturingAction?.let { action ->

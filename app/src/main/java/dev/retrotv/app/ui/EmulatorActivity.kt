@@ -52,6 +52,7 @@ import com.swordfish.libretrodroid.Variable
 import dev.retrotv.app.data.ConsoleSettings
 import dev.retrotv.app.data.dataStore
 import dev.retrotv.app.data.db.AppDatabase
+import dev.retrotv.app.ui.screens.ConsoleSettingsScreen
 import dev.retrotv.app.ui.screens.InGameMenu
 import dev.retrotv.app.ui.theme.RetroGameTVTheme
 import kotlinx.coroutines.Dispatchers
@@ -75,6 +76,22 @@ class EmulatorActivity : ComponentActivity() {
     private var currentAspectRatio by mutableStateOf(AspectRatio.FULL)
     private var showResumeDialog by mutableStateOf(false)
     private var resumeSelection by mutableIntStateOf(0)  // 0=Continuar, 1=Nueva partida
+    private var showSettings by mutableStateOf(false)
+    private var captureCallback: ((Int) -> Unit)? = null
+    private var isResettingGame = false
+    private var menuTimerPending = false
+    private val menuHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val showMenuRunnable: Runnable = Runnable {
+        menuTimerPending = false
+        // Release START in the emulator so it doesn't stay pressed while the menu is open
+        val nativeStart = keyMap[KeyEvent.KEYCODE_BUTTON_START]
+        if (nativeStart != null && ::retroView.isInitialized) {
+            retroView.sendKeyEvent(KeyEvent.ACTION_UP, nativeStart)
+        }
+        showMenu = true
+        menuSelection = 0
+    }
+    private lateinit var overlayView: ComposeView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -103,8 +120,17 @@ class EmulatorActivity : ComponentActivity() {
             saveRAMState    = if (srmFile.exists()) srmFile.readBytes() else null
             if (system == "nds") {
                 variables = arrayOf(
-                    Variable("melonds_screen_layout", "Left/Right", ""),
-                    Variable("melonds_touch_mode",    "Joystick",    ""),
+                    Variable("melonds_screen_layout",    "Left/Right", ""),
+                    Variable("melonds_touch_mode",       "Joystick",   ""),
+                    Variable("melonds_jit_enable",       "enabled",    ""),
+                    Variable("melonds_threaded_renderer","enabled",    ""),
+                    Variable("melonds_use_dsp_lle",      "disabled",   ""),
+                )
+            }
+            if (system == "ps1") {
+                variables = arrayOf(
+                    Variable("pcsx_rearmed_drc",       "enabled",  ""),
+                    Variable("pcsx_rearmed_neon_gt2x", "disabled", ""),
                 )
             }
         }
@@ -144,6 +170,7 @@ class EmulatorActivity : ComponentActivity() {
         }
 
         ComposeView(this).also { cv ->
+            overlayView = cv
             cv.setContent {
                 RetroGameTVTheme {
                     if (showResumeDialog) {
@@ -159,6 +186,25 @@ class EmulatorActivity : ComponentActivity() {
                             selectedIndex = menuSelection,
                         )
                     }
+                    if (showSettings) {
+                        ConsoleSettingsScreen(
+                            system = system,
+                            onBack = {
+                                showSettings = false
+                                captureCallback = null
+                                retroView.requestFocus()
+                                lifecycleScope.launch {
+                                    val prefs = dataStore.data.first()
+                                    keyMap = ConsoleSettings.buildKeyMap(system, prefs)
+                                    currentAspectRatio = AspectRatio.fromKey(
+                                        prefs[ConsoleSettings.aspectKey(system)] ?: AspectRatio.FULL.key
+                                    )
+                                    applyAspectRatio()
+                                }
+                            },
+                            onRegisterCapture = { cb: ((Int) -> Unit)? -> captureCallback = cb },
+                        )
+                    }
                 }
             }
             root.addView(cv, FrameLayout.LayoutParams(
@@ -171,8 +217,13 @@ class EmulatorActivity : ComponentActivity() {
     }
 
     override fun onPause() {
-        autosaveSync()
+        if (!isResettingGame) autosaveSync()
         super.onPause()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        menuHandler.removeCallbacksAndMessages(null)
     }
 
     override fun onStop() {
@@ -212,6 +263,9 @@ class EmulatorActivity : ComponentActivity() {
 
         if (event.keyCode == KeyEvent.KEYCODE_BACK) {
             if (showResumeDialog && action == KeyEvent.ACTION_DOWN) return true
+            if (showSettings && action == KeyEvent.ACTION_DOWN) {
+                showSettings = false; captureCallback = null; retroView.requestFocus(); return true
+            }
             if (showMenu && action == KeyEvent.ACTION_DOWN) { showMenu = false; return true }
             return super.dispatchKeyEvent(event)
         }
@@ -229,6 +283,13 @@ class EmulatorActivity : ComponentActivity() {
             return true
         }
 
+        // Settings overlay — forward to capture callback or pass-through to ComposeView
+        if (showSettings) {
+            val cb = captureCallback
+            if (cb != null && action == KeyEvent.ACTION_DOWN) { cb(event.keyCode); return true }
+            return super.dispatchKeyEvent(event)
+        }
+
         if (event.keyCode == KeyEvent.KEYCODE_MENU && action == KeyEvent.ACTION_DOWN) {
             showMenu = !showMenu
             return true
@@ -243,12 +304,39 @@ class EmulatorActivity : ComponentActivity() {
                         menuSelection = (menuSelection + 1) % MENU_SIZE
                     KeyEvent.KEYCODE_DPAD_CENTER,
                     KeyEvent.KEYCODE_BUTTON_A -> invokeMenuAction()
+                    KeyEvent.KEYCODE_BUTTON_B -> showMenu = false
+                    // START only on first press — ignore repeats while held (would spam actions)
+                    KeyEvent.KEYCODE_BUTTON_START ->
+                        if (event.repeatCount == 0) invokeMenuAction()
                 }
             }
             return true
         }
 
         val effectiveKeyCode = translateKeyboardKey(event.keyCode)
+
+        // Long-press START (900ms) → open in-game menu; short press passes through to game
+        if (effectiveKeyCode == KeyEvent.KEYCODE_BUTTON_START) {
+            when (action) {
+                KeyEvent.ACTION_DOWN -> {
+                    if (!menuTimerPending) {
+                        menuTimerPending = true
+                        menuHandler.postDelayed(showMenuRunnable, 900)
+                    }
+                    // Fall through — DOWN reaches the game naturally
+                }
+                KeyEvent.ACTION_UP -> {
+                    if (menuTimerPending) {
+                        menuHandler.removeCallbacks(showMenuRunnable)
+                        menuTimerPending = false
+                    }
+                    // Fall through — UP reaches the game naturally
+                    // (if long press fired, showMenuRunnable already sent synthetic UP)
+                }
+            }
+            // Continue to keyMap dispatch below
+        }
+
         val nativeCode = keyMap[effectiveKeyCode]
         if (nativeCode != null && ::retroView.isInitialized) {
             retroView.sendKeyEvent(action, nativeCode)
@@ -265,6 +353,29 @@ class EmulatorActivity : ComponentActivity() {
     }
 
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
+        if (!::retroView.isInitialized || showSettings) {
+            return super.dispatchGenericMotionEvent(event)
+        }
+        // Xbox 360 and similar controllers send D-pad as HAT axis events, not DPAD key events.
+        // Handle them explicitly for menu/dialog navigation so they don't rely on JoystickGlue.
+        if (event.source and InputDevice.SOURCE_JOYSTICK != 0) {
+            if (showResumeDialog) {
+                val hatX = event.getAxisValue(MotionEvent.AXIS_HAT_X)
+                when {
+                    hatX < -0.5f -> resumeSelection = 0
+                    hatX > 0.5f  -> resumeSelection = 1
+                }
+                return true
+            }
+            if (showMenu) {
+                val hatY = event.getAxisValue(MotionEvent.AXIS_HAT_Y)
+                when {
+                    hatY < -0.5f -> menuSelection = (menuSelection - 1 + MENU_SIZE) % MENU_SIZE
+                    hatY > 0.5f  -> menuSelection = (menuSelection + 1) % MENU_SIZE
+                }
+                return true
+            }
+        }
         if (!::retroView.isInitialized || showMenu || showResumeDialog) {
             return super.dispatchGenericMotionEvent(event)
         }
@@ -301,8 +412,10 @@ class EmulatorActivity : ComponentActivity() {
         when (menuSelection) {
             0 -> quickSave()
             1 -> quickLoad()
-            2 -> cycleAspectRatio()
-            3 -> autosaveAndExit()
+            2 -> resetGame()
+            3 -> cycleAspectRatio()
+            4 -> openSettings()
+            5 -> autosaveAndExit()
         }
     }
 
@@ -334,6 +447,20 @@ class EmulatorActivity : ComponentActivity() {
                 prefs[ConsoleSettings.aspectKey(system)] = next.key
             }
         }
+    }
+
+    private fun resetGame() {
+        showMenu = false
+        isResettingGame = true  // prevents onPause from autosaving the current state
+        stateFile.delete()
+        srmFile.delete()
+        recreate()
+    }
+
+    private fun openSettings() {
+        showMenu = false
+        showSettings = true
+        overlayView.requestFocus()
     }
 
     private fun autosaveAndExit() {
@@ -393,7 +520,9 @@ class EmulatorActivity : ComponentActivity() {
         return listOf(
             "Quick Save",
             "Quick Load${if (stateFile.exists()) "" else "  (sin guardado)"}",
+            "Reiniciar",
             "Aspecto: ${currentAspectRatio.label} \u2192 ${nextAr.label}",
+            "Controles",
             "Salir (con autosave)",
         )
     }
@@ -433,7 +562,7 @@ class EmulatorActivity : ComponentActivity() {
         const val EXTRA_ROM_PATH  = "extra_rom_path"
         const val EXTRA_SYSTEM    = "extra_system"
 
-        private const val MENU_SIZE = 4
+        private const val MENU_SIZE = 6
     }
 }
 

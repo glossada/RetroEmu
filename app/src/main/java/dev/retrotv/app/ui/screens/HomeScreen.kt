@@ -18,22 +18,40 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Button
+import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Card
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import dev.retrotv.app.R
+import dev.retrotv.app.viewmodel.ExportViewModel
 import dev.retrotv.app.viewmodel.ImportViewModel
 import java.io.File
 import dev.retrotv.app.viewmodel.ScanViewModel
@@ -50,8 +68,12 @@ fun HomeScreen(
     onSelectVolume: (java.io.File) -> Unit = {},
     importState: ImportViewModel.ImportState = ImportViewModel.ImportState.Idle,
     onDismissImport: () -> Unit = {},
+    onExportClick: () -> Unit = {},
+    onSelectExportVolume: (java.io.File) -> Unit = {},
+    exportState: ExportViewModel.ExportState = ExportViewModel.ExportState.Idle,
+    onDismissExport: () -> Unit = {},
 ) {
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF080A0D))) {
         Row(
             modifier = Modifier
                 .fillMaxSize()
@@ -65,18 +87,88 @@ fun HomeScreen(
                 horizontalAlignment = Alignment.Start,
             ) {
                 Text(
-                    text = "RetroGameTV",
-                    style = MaterialTheme.typography.headlineMedium,
+                    text = "RETRO",
+                    style = TextStyle(
+                        color = Color(0xFF00E5FF),
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 5.sp,
+                        shadow = Shadow(
+                            color = Color(0xFF00E5FF),
+                            offset = Offset.Zero,
+                            blurRadius = 32f,
+                        ),
+                    ),
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = onScanClick, modifier = Modifier.fillMaxWidth()) {
-                    Text("Escanear ROMs")
+                Text(
+                    text = "GAME TV",
+                    style = TextStyle(
+                        color = Color(0xFF00E5FF).copy(alpha = 0.85f),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 4.sp,
+                        shadow = Shadow(
+                            color = Color(0xFF00E5FF),
+                            offset = Offset.Zero,
+                            blurRadius = 20f,
+                        ),
+                    ),
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Box(
+                    modifier = Modifier
+                        .width(130.dp)
+                        .height(1.dp)
+                        .background(Color(0xFF00E5FF).copy(alpha = 0.45f)),
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Button(
+                    onClick = onScanClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.colors(
+                        containerColor = Color(0xFF001824),
+                        contentColor = Color(0xFF00E5FF),
+                        focusedContainerColor = Color(0xFF00E5FF),
+                        focusedContentColor = Color(0xFF000A10),
+                    ),
+                ) {
+                    Text("Escanear ROMs", letterSpacing = 0.5.sp)
                 }
-                Button(onClick = onScanUsbClick, modifier = Modifier.fillMaxWidth()) {
-                    Text("Escanear USB")
+                Button(
+                    onClick = onScanUsbClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.colors(
+                        containerColor = Color(0xFF001824),
+                        contentColor = Color(0xFF00E5FF),
+                        focusedContainerColor = Color(0xFF00E5FF),
+                        focusedContentColor = Color(0xFF000A10),
+                    ),
+                ) {
+                    Text("Escanear USB", letterSpacing = 0.5.sp)
                 }
-                Button(onClick = onImportClick, modifier = Modifier.fillMaxWidth()) {
-                    Text("Importar USB")
+                Button(
+                    onClick = onImportClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.colors(
+                        containerColor = Color(0xFF001824),
+                        contentColor = Color(0xFF00E5FF),
+                        focusedContainerColor = Color(0xFF00E5FF),
+                        focusedContentColor = Color(0xFF000A10),
+                    ),
+                ) {
+                    Text("Importar USB", letterSpacing = 0.5.sp)
+                }
+                Button(
+                    onClick = onExportClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.colors(
+                        containerColor = Color(0xFF001824),
+                        contentColor = Color(0xFF00E5FF),
+                        focusedContainerColor = Color(0xFF00E5FF),
+                        focusedContentColor = Color(0xFF000A10),
+                    ),
+                ) {
+                    Text("Exportar USB", letterSpacing = 0.5.sp)
                 }
             }
 
@@ -142,11 +234,43 @@ fun HomeScreen(
             }
         }
 
+        // CRT scanlines overlay
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val lineH = 2.dp.toPx()
+            val gap = 2.dp.toPx()
+            var y = 0f
+            while (y < size.height) {
+                drawRect(
+                    color = Color.Black.copy(alpha = 0.18f),
+                    topLeft = Offset(0f, y),
+                    size = Size(size.width, lineH),
+                )
+                y += lineH + gap
+            }
+        }
+        // CRT vignette (darkened edges)
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            drawRect(
+                brush = Brush.radialGradient(
+                    colorStops = arrayOf(
+                        0.0f to Color.Transparent,
+                        0.60f to Color.Transparent,
+                        1.0f to Color.Black.copy(alpha = 0.55f),
+                    ),
+                    center = Offset(size.width / 2f, size.height / 2f),
+                    radius = size.width * 0.72f,
+                ),
+            )
+        }
+
         if (scanState !is ScanViewModel.ScanState.Idle) {
             ScanOverlay(state = scanState, onSelectVolume = onSelectScanVolume, onDismiss = onDismissScan)
         }
         if (importState !is ImportViewModel.ImportState.Idle) {
             ImportOverlay(state = importState, onSelectVolume = onSelectVolume, onDismiss = onDismissImport)
+        }
+        if (exportState !is ExportViewModel.ExportState.Idle) {
+            ExportOverlay(state = exportState, onSelectVolume = onSelectExportVolume, onDismiss = onDismissExport)
         }
     }
 }
@@ -157,20 +281,33 @@ private fun ScanOverlay(
     onSelectVolume: (File) -> Unit = {},
     onDismiss: () -> Unit,
 ) {
-    val focusRequester = remember { FocusRequester() }
+    val fr = remember { FocusRequester() }
+    val volumes = if (state is ScanViewModel.ScanState.SelectingVolume) state.volumes else emptyList()
+    var selection by remember(state) { mutableStateOf(0) }
 
-    // Intercept ALL key events so nothing behind the overlay reacts
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.80f))
-            .onKeyEvent { true },
+            .focusRequester(fr)
+            .focusable()
+            .onKeyEvent { ev ->
+                if (ev.type != KeyEventType.KeyDown) return@onKeyEvent true
+                when (ev.key) {
+                    Key.DirectionUp   -> { if (selection > 0) selection--; true }
+                    Key.DirectionDown -> { if (selection < volumes.size) selection++; true }
+                    Key.Enter, Key.DirectionCenter, Key.ButtonA -> {
+                        if (volumes.isNotEmpty() && selection < volumes.size) onSelectVolume(volumes[selection])
+                        else onDismiss()
+                        true
+                    }
+                    Key.Back, Key.ButtonB -> { onDismiss(); true }
+                    else -> true
+                }
+            },
         contentAlignment = Alignment.Center,
     ) {
-        Surface(
-            modifier = Modifier.width(420.dp),
-            shape = RoundedCornerShape(16.dp),
-        ) {
+        Surface(modifier = Modifier.width(420.dp), shape = RoundedCornerShape(16.dp)) {
             Column(
                 modifier = Modifier.padding(32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -182,93 +319,55 @@ private fun ScanOverlay(
                         state.volumes.forEachIndexed { i, vol ->
                             Button(
                                 onClick = { onSelectVolume(vol) },
-                                modifier = if (i == 0) Modifier.fillMaxWidth().focusRequester(focusRequester) else Modifier.fillMaxWidth(),
+                                modifier = Modifier.fillMaxWidth().alpha(if (selection == i) 1f else 0.45f),
                             ) { Text(vol.name) }
                         }
-                        Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text("Cancelar") }
-                        LaunchedEffect(Unit) { runCatching { focusRequester.requestFocus() } }
+                        Button(
+                            onClick = onDismiss,
+                            modifier = Modifier.fillMaxWidth().alpha(if (selection == volumes.size) 1f else 0.45f),
+                        ) { Text("Cancelar") }
+                        Text("▲ ▼ para elegir   •   A / OK para confirmar", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     is ScanViewModel.ScanState.Scanning -> {
                         val systemLabel = when (state.system) {
-                            "nes" -> "NES"; "snes" -> "Super Nintendo"; "megadrive" -> "Mega Drive"; "gba" -> "Game Boy Advance"; "nds" -> "Nintendo DS"; "ps1" -> "PlayStation"; else -> state.system
+                            "nes" -> "NES"; "snes" -> "Super Nintendo"; "megadrive" -> "Mega Drive"
+                            "gba" -> "Game Boy Advance"; "nds" -> "Nintendo DS"; "ps1" -> "PlayStation"; else -> state.system
                         }
                         val source = if (state.isExternal) " (USB)" else ""
-                        Text(
-                            text = "Escaneando $systemLabel$source\u2026",
-                            style = MaterialTheme.typography.titleMedium,
-                        )
+                        Text("Escaneando $systemLabel$source…", style = MaterialTheme.typography.titleMedium)
                         if (state.total > 0) {
-                            Text(
-                                text = "${state.current} de ${state.total}",
-                                style = MaterialTheme.typography.bodyLarge,
-                            )
+                            Text("${state.current} de ${state.total}", style = MaterialTheme.typography.bodyLarge)
                             ProgressBar(fraction = state.current.toFloat() / state.total)
                         } else {
-                            Text(
-                                text = "Leyendo cat\u00e1logo\u2026",
-                                style = MaterialTheme.typography.bodyLarge,
-                            )
+                            Text("Leyendo catálogo…", style = MaterialTheme.typography.bodyLarge)
                         }
-                        // Absorb focus during scan so nothing behind is reachable
-                        Box(modifier = Modifier.focusRequester(focusRequester).focusable())
-                        LaunchedEffect(Unit) { runCatching { focusRequester.requestFocus() } }
                     }
                     is ScanViewModel.ScanState.Done -> {
-                        Text(
-                            text = "Escaneo completado",
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                        Text(
-                            text = "${state.count} juegos encontrados",
-                            style = MaterialTheme.typography.bodyLarge,
-                        )
+                        Text("Escaneo completado", style = MaterialTheme.typography.titleMedium)
+                        Text("${state.count} juegos encontrados", style = MaterialTheme.typography.bodyLarge)
                         if (state.skipped.isNotEmpty()) {
-                            Text(
-                                text = "${state.skipped.size} archivo(s) omitido(s):",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.error,
-                            )
+                            Text("${state.skipped.size} archivo(s) omitido(s):", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
                             state.skipped.take(5).forEach { name ->
-                                Text(
-                                    text = "• $name",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
+                                Text("• $name", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             if (state.skipped.size > 5) {
-                                Text(
-                                    text = "… y ${state.skipped.size - 5} más",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
+                                Text("… y ${state.skipped.size - 5} más", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
-                        Button(
-                            onClick = onDismiss,
-                            modifier = Modifier.focusRequester(focusRequester),
-                        ) { Text("Cerrar") }
-                        LaunchedEffect(state) { runCatching { focusRequester.requestFocus() } }
+                        Button(onClick = onDismiss) { Text("Cerrar") }
+                        Text("A / OK / Atrás para cerrar", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     is ScanViewModel.ScanState.Error -> {
-                        Text(
-                            text = "Error en el escaneo",
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                        Text(
-                            text = state.message,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                        Button(
-                            onClick = onDismiss,
-                            modifier = Modifier.focusRequester(focusRequester),
-                        ) { Text("Cerrar") }
-                        LaunchedEffect(state) { runCatching { focusRequester.requestFocus() } }
+                        Text("Error en el escaneo", style = MaterialTheme.typography.titleMedium)
+                        Text(state.message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+                        Button(onClick = onDismiss) { Text("Cerrar") }
+                        Text("A / OK / Atrás para cerrar", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     ScanViewModel.ScanState.Idle -> {}
                 }
             }
         }
+        LaunchedEffect(Unit) { runCatching { fr.requestFocus() } }
     }
 }
 
@@ -307,6 +406,14 @@ private fun ConsoleCard(
                 .background(cardColor),
             contentAlignment = Alignment.Center,
         ) {
+            // Top highlight bar (retro screen-glare effect)
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .fillMaxWidth()
+                    .height(2.dp)
+                    .background(Color.White.copy(alpha = 0.35f)),
+            )
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
@@ -328,24 +435,128 @@ private fun ConsoleCard(
 }
 
 @Composable
-private fun ImportOverlay(
-    state: ImportViewModel.ImportState,
+private fun ExportOverlay(
+    state: ExportViewModel.ExportState,
     onSelectVolume: (File) -> Unit = {},
     onDismiss: () -> Unit,
 ) {
-    val focusRequester = remember { FocusRequester() }
+    val fr = remember { FocusRequester() }
+    val volumes = if (state is ExportViewModel.ExportState.SelectingVolume) state.volumes else emptyList()
+    var selection by remember(state) { mutableStateOf(0) }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.80f))
-            .onKeyEvent { true },
+            .focusRequester(fr)
+            .focusable()
+            .onKeyEvent { ev ->
+                if (ev.type != KeyEventType.KeyDown) return@onKeyEvent true
+                when (ev.key) {
+                    Key.DirectionUp   -> { if (selection > 0) selection--; true }
+                    Key.DirectionDown -> { if (selection < volumes.size) selection++; true }
+                    Key.Enter, Key.DirectionCenter, Key.ButtonA -> {
+                        if (volumes.isNotEmpty() && selection < volumes.size) onSelectVolume(volumes[selection])
+                        else onDismiss()
+                        true
+                    }
+                    Key.Back, Key.ButtonB -> { onDismiss(); true }
+                    else -> true
+                }
+            },
         contentAlignment = Alignment.Center,
     ) {
-        Surface(
-            modifier = Modifier.width(460.dp),
-            shape = RoundedCornerShape(16.dp),
-        ) {
+        Surface(modifier = Modifier.width(460.dp), shape = RoundedCornerShape(16.dp)) {
+            Column(
+                modifier = Modifier.padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(20.dp),
+            ) {
+                when (state) {
+                    is ExportViewModel.ExportState.SelectingVolume -> {
+                        Text("Selecciona el destino", style = MaterialTheme.typography.titleMedium)
+                        state.volumes.forEachIndexed { i, vol ->
+                            Button(
+                                onClick = { onSelectVolume(vol) },
+                                modifier = Modifier.fillMaxWidth().alpha(if (selection == i) 1f else 0.45f),
+                            ) { Text(vol.name) }
+                        }
+                        Button(
+                            onClick = onDismiss,
+                            modifier = Modifier.fillMaxWidth().alpha(if (selection == volumes.size) 1f else 0.45f),
+                        ) { Text("Cancelar") }
+                        Text("▲ ▼ para elegir   •   A / OK para confirmar", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    is ExportViewModel.ExportState.Copying -> {
+                        val systemLabel = when (state.system) {
+                            "nes" -> "NES"; "snes" -> "Super Nintendo"; "megadrive" -> "Mega Drive"
+                            "gba" -> "Game Boy Advance"; "nds" -> "Nintendo DS"; "ps1" -> "PlayStation"; else -> state.system
+                        }
+                        Text("Exportando $systemLabel…", style = MaterialTheme.typography.titleMedium)
+                        if (state.total > 0) {
+                            Text("${state.copied} de ${state.total} archivos")
+                            ProgressBar(fraction = state.copied.toFloat() / state.total)
+                        }
+                    }
+                    is ExportViewModel.ExportState.Done -> {
+                        Text("Exportación completada", style = MaterialTheme.typography.titleMedium)
+                        state.results.forEach { (system, count) ->
+                            val label = when (system) {
+                                "nes" -> "NES"; "snes" -> "Super Nintendo"; "megadrive" -> "Mega Drive"
+                                "gba" -> "Game Boy Advance"; "nds" -> "Nintendo DS"; "ps1" -> "PlayStation"; else -> system
+                            }
+                            Text("$label: $count archivos", style = MaterialTheme.typography.bodyLarge)
+                        }
+                        Button(onClick = onDismiss) { Text("Cerrar") }
+                        Text("A / OK / Atrás para cerrar", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    is ExportViewModel.ExportState.Error -> {
+                        Text("Error", style = MaterialTheme.typography.titleMedium)
+                        Text(state.message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
+                        Button(onClick = onDismiss) { Text("Cerrar") }
+                        Text("A / OK / Atrás para cerrar", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    else -> {}
+                }
+            }
+        }
+        LaunchedEffect(Unit) { runCatching { fr.requestFocus() } }
+    }
+}
+
+@Composable
+private fun ImportOverlay(
+    state: ImportViewModel.ImportState,
+    onSelectVolume: (File) -> Unit = {},
+    onDismiss: () -> Unit,
+) {
+    val fr = remember { FocusRequester() }
+    val volumes = if (state is ImportViewModel.ImportState.SelectingVolume) state.volumes else emptyList()
+    var selection by remember(state) { mutableStateOf(0) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.80f))
+            .focusRequester(fr)
+            .focusable()
+            .onKeyEvent { ev ->
+                if (ev.type != KeyEventType.KeyDown) return@onKeyEvent true
+                when (ev.key) {
+                    Key.DirectionUp   -> { if (selection > 0) selection--; true }
+                    Key.DirectionDown -> { if (selection < volumes.size) selection++; true }
+                    Key.Enter, Key.DirectionCenter, Key.ButtonA -> {
+                        if (volumes.isNotEmpty() && selection < volumes.size) onSelectVolume(volumes[selection])
+                        else onDismiss()
+                        true
+                    }
+                    Key.Back, Key.ButtonB -> { onDismiss(); true }
+                    else -> true
+                }
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        Surface(modifier = Modifier.width(460.dp), shape = RoundedCornerShape(16.dp)) {
             Column(
                 modifier = Modifier.padding(32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -357,64 +568,50 @@ private fun ImportOverlay(
                         state.volumes.forEachIndexed { i, vol ->
                             Button(
                                 onClick = { onSelectVolume(vol) },
-                                modifier = if (i == 0) Modifier.focusRequester(focusRequester) else Modifier,
+                                modifier = Modifier.fillMaxWidth().alpha(if (selection == i) 1f else 0.45f),
                             ) { Text(vol.name) }
                         }
-                        LaunchedEffect(Unit) { runCatching { focusRequester.requestFocus() } }
+                        Button(
+                            onClick = onDismiss,
+                            modifier = Modifier.fillMaxWidth().alpha(if (selection == volumes.size) 1f else 0.45f),
+                        ) { Text("Cancelar") }
+                        Text("▲ ▼ para elegir   •   A / OK para confirmar", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-
                     is ImportViewModel.ImportState.Copying -> {
                         val systemLabel = when (state.system) {
-                            "nes" -> "NES"; "snes" -> "Super Nintendo"; "megadrive" -> "Mega Drive"; "gba" -> "Game Boy Advance"; "nds" -> "Nintendo DS"; "ps1" -> "PlayStation"; else -> state.system
+                            "nes" -> "NES"; "snes" -> "Super Nintendo"; "megadrive" -> "Mega Drive"
+                            "gba" -> "Game Boy Advance"; "nds" -> "Nintendo DS"; "ps1" -> "PlayStation"; else -> state.system
                         }
                         Text("Copiando $systemLabel…", style = MaterialTheme.typography.titleMedium)
                         if (state.total > 0) {
                             Text("${state.copied} de ${state.total} archivos")
                             ProgressBar(fraction = state.copied.toFloat() / state.total)
                         }
-                        Box(modifier = Modifier.focusRequester(focusRequester).focusable())
-                        LaunchedEffect(Unit) { runCatching { focusRequester.requestFocus() } }
                     }
-
                     is ImportViewModel.ImportState.Done -> {
                         Text("Importación completada", style = MaterialTheme.typography.titleMedium)
                         state.results.forEach { (system, count) ->
                             val label = when (system) {
-                                "nes" -> "NES"; "snes" -> "Super Nintendo"; "megadrive" -> "Mega Drive"; "gba" -> "Game Boy Advance"; "nds" -> "Nintendo DS"; "ps1" -> "PlayStation"; else -> system
+                                "nes" -> "NES"; "snes" -> "Super Nintendo"; "megadrive" -> "Mega Drive"
+                                "gba" -> "Game Boy Advance"; "nds" -> "Nintendo DS"; "ps1" -> "PlayStation"; else -> system
                             }
                             Text("$label: $count archivos copiados", style = MaterialTheme.typography.bodyLarge)
                         }
-                        Text(
-                            "Ahora presiona Escanear ROMs para actualizar la lista.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                        )
-                        Button(
-                            onClick = onDismiss,
-                            modifier = Modifier.focusRequester(focusRequester),
-                        ) { Text("Cerrar") }
-                        LaunchedEffect(state) { runCatching { focusRequester.requestFocus() } }
+                        Text("Ahora presiona Escanear ROMs para actualizar la lista.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                        Button(onClick = onDismiss) { Text("Cerrar") }
+                        Text("A / OK / Atrás para cerrar", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-
                     is ImportViewModel.ImportState.Error -> {
                         Text("Error", style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            text = state.message,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                        )
-                        Button(
-                            onClick = onDismiss,
-                            modifier = Modifier.focusRequester(focusRequester),
-                        ) { Text("Cerrar") }
-                        LaunchedEffect(state) { runCatching { focusRequester.requestFocus() } }
+                        Text(state.message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
+                        Button(onClick = onDismiss) { Text("Cerrar") }
+                        Text("A / OK / Atrás para cerrar", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-
                     else -> {}
                 }
             }
         }
+        LaunchedEffect(Unit) { runCatching { fr.requestFocus() } }
     }
 }
+
