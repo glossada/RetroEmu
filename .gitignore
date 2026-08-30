@@ -29,3 +29,8 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Documentos de desarrollo local (no forman parte del repo público)
+CLAUDE.md
+ESPECIFICACION.md
+PROMPT_CLAUDE_CODE.md
